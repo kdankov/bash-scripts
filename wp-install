@@ -1,0 +1,113 @@
+#!/bin/bash
+
+site_db=$1			# Name of the MySQL wordpress database
+site_db_user=$1		# Database user account
+
+if [ -z "$1" ] # Is parameter #1 zero length?
+then
+	echo -e "Error: install_wp requires site name to be specified. \n"
+else
+
+	if [ -d $MYSQL_DATA_DIR$site_db ]
+	then
+		echo -e "Error: Database $site_db aready exists! Wordpress installation aborted! \n"
+	else
+		mysql.server status | grep 'SUCCESS' > /dev/null 2>&1
+		if [ $? != 0 ]
+		then
+			echo -e 'Error: MySQL not running'
+		else
+
+			cwd=${PWD#*/}
+
+			create-vhost $1
+			
+			echo -e "Installing WordPress ...\n"
+
+			echo -e '--- MySQL server check passed: running'
+
+			cp ${APACHE_VHOSTS_ROOT_DIR}latest.tar.gz $APACHE_VHOSTS_ROOT_DIR$1
+			cd $APACHE_VHOSTS_ROOT_DIR$1
+			# wget http://wordpress.org/latest.tar.gz
+			tar xzf $APACHE_VHOSTS_ROOT_DIR$1/latest.tar.gz > /dev/null 2>&1 && 
+			rm $APACHE_VHOSTS_ROOT_DIR$1/latest.tar.gz
+			echo -e "--- getting the latest WordPress and extracting files."
+
+			mv $APACHE_VHOSTS_ROOT_DIR$1/wordpress/wp-content $APACHE_VHOSTS_ROOT_DIR$1/content
+			echo -e "--- wp-content folder moved outside wordpress folder."
+
+			# Create wp-config
+			{
+				echo "<?php"
+				echo "define('DB_NAME', '"$site_db"');"
+				echo "define('DB_USER', '"$site_db_user"');"
+				echo "define('DB_PASSWORD', '"$DEFAULT_MYSQL_USER_PASS"');"
+				echo "define('DB_HOST', '"$MYSQL_HOST"');"
+				echo "define('DB_CHARSET', 'utf8');"
+				echo "define('EMPTY_TRASH_DAYS', 30 );  // 30 days"
+				echo "define('DISALLOW_FILE_MODS',true); // Disable Plugin and Theme Update and Installation"
+				echo "define('WP_POST_REVISIONS', 20); // Specify the Number of Post Revisions"
+				echo "define('WP_HOME', 'http://"$1"');"
+				echo "define('WP_SITEURL', 'http://"$1"/wordpress');"
+				echo "define('WP_CONTENT_DIR', '"$APACHE_VHOSTS_ROOT_DIR$1"/content');"
+				echo "define('WP_CONTENT_URL', 'http://"$1"/content');"
+				echo '$table_prefix  = "wp_";'
+				echo "define('WPLANG', '');"
+				echo "define('WP_DEBUG', false);"
+				echo "if ( !defined('ABSPATH') )"
+				echo "	define('ABSPATH', dirname(__FILE__) . '/');"
+				echo "	require_once(ABSPATH . 'wp-settings.php');"
+			} > $APACHE_VHOSTS_ROOT_DIR$1/wordpress/wp-config.php
+			echo -e "--- wp-config created."
+			
+			# Create additional index.php file outside the wordpress folder
+			{
+				echo "<?php"
+				echo "define('WP_USE_THEMES', true);"
+				echo "require('./wordpress/wp-blog-header.php');"
+				echo "?>"
+			} > $APACHE_VHOSTS_ROOT_DIR$1/index.php
+			echo -e "--- index.php file created."
+			
+			# Create DB and add privileges
+			mysqladmin -u $MYSQL_ROOT_USER -p"$MYSQL_ROOT_PASS" create $site_db > /dev/null 2>&1
+			{ 
+				echo "use mysql;"
+				echo grant all on ${site_db}.* to "$site_db_user"@'localhost' identified by "'${DEFAULT_MYSQL_USER_PASS}';"
+				echo "flush privileges;"
+			} > $APACHE_VHOSTS_ROOT_DIR$1/sql.$$
+			mysql -u $MYSQL_ROOT_USER -p"$MYSQL_ROOT_PASS" $site_db < $APACHE_VHOSTS_ROOT_DIR$1/sql.$$ > /dev/null 2>&1
+			echo -e "--- database & user created."
+			
+			# remove the database & user generation file
+			rm $APACHE_VHOSTS_ROOT_DIR$1/sql.$$
+
+			# creation of a bare-bones development theme
+			cd $APACHE_VHOSTS_ROOT_DIR$1/content/themes
+			cp $APACHE_VHOSTS_ROOT_DIR/wp_theme_template.zip .
+			tar xf wp_theme_template.zip > /dev/null 2>&1 &&
+			mv wp_theme_template $1
+
+			# cleanup the zip
+			rm wp_theme_template.zip
+
+			# go into core and install db and activate the new theme
+			cd $APACHE_VHOSTS_ROOT_DIR$1/wordpress
+			wp core install --url=$APACHE_VHOSTS_ROOT_DIR$1/wordpress --title=$1 --admin_name=$DEFAULT_WORDPRESS_USER_NAME --admin_email=$DEFAULT_WORDPRESS_USER_EMAIL --admin_password=$DEFAULT_WORDPRESS_USER_PASS > /dev/null 2>&1
+			echo -e "--- WordPress database install & admin user created."
+			wp theme activate "$1" > /dev/null 2>&1
+			echo -e "--- default development theme created and activated. \n"
+
+			# get back to the initial directory
+			cd /${cwd}
+			
+			echo -e "WordPress installation & configuration - Finished! \n"
+			
+			consular-install-project $1
+
+			open 'http://'$1'/'
+			open 'http://'$1'/wordpress/wp-admin'
+
+		fi
+	fi
+fi
