@@ -5,7 +5,7 @@ site_db_user=$1		# Database user account
 
 if [ -z "$1" ] # Is parameter #1 zero length?
 then
-	echo -e "Error: install_wp requires site name to be specified. \n"
+	echo -e "Error: wp-install requires site name to be specified. \n"
 else
 
 	if [ -d $MYSQL_DATA_DIR$site_db ]

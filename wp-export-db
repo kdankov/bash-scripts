@@ -1,0 +1,18 @@
+#!/bin/bash
+
+if [ -z "$1" ] # Is parameter #1 zero length?
+then
+	echo -e "Error: Please specify site name. \n"
+	exit 1
+fi
+
+if [ -d !$APACHE_VHOSTS_ROOT_DIR$1 ]
+then
+	echo -e "Error: No such site!"
+	exit 1
+fi
+
+echo -e "Exporting DB for Site: "$1
+cd $APACHE_VHOSTS_ROOT_DIR$1/wordpress
+wp db export
+
