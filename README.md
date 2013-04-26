@@ -21,8 +21,13 @@ Most scripts use these variables. Variable names should be self-explanatory.
 	export DEFAULT_WORDPRESS_USER_EMAIL='...'
 	export DEFAULT_WORDPRESS_USER_PASS='...'
 
+	export DEFAULT_DRUPAL_USER_NAME='...'
+	export DEFAULT_DRUPAL_USER_EMAIL='...'
+	export DEFAULT_DRUPAL_USER_PASS='...'
 
-## create-vhost
+# General scripts
+
+## lazyvhost-create
 
 1. Creates a site folder
 2. Setup & configuration of apache vhosts
@@ -30,7 +35,7 @@ Most scripts use these variables. Variable names should be self-explanatory.
 
 #### Example
 
-	create-vhost portfolio
+	lazyvhost-create portfolio
 
 This will create folder and setup a Vhost for 'portfolio'. Look at the source for more details.
 
@@ -40,20 +45,22 @@ This will create folder and setup a Vhost for 'portfolio'. Look at the source fo
 * Apache uses VHosts
 * Apache uses single VHost file for each VHost
 
-## consular-install-project
+## lazyconsular-installproject
 
 1. Creates a new Consular project that is dependant in the folder structure used in `wp-install`
 
-## wp-install
+# WordPress related scripts
+
+## lazywp-install
 
 1. Downloads, Configures and installs latest version of WordPress
 2. Installs and Activates a custom theme.
 
-Uses both `create-vhost` and `consular-install-project`
+Uses both `lazyvhost-create` and `lazyconsular-installproject`
 
 #### Example
 
-	wp-install portfolio
+	lazywp-install portfolio
 
 This will create and configure a VHost for 'portfolio' and then proceed to install and configure a WordPress there.
 
@@ -61,7 +68,23 @@ This will create and configure a VHost for 'portfolio' and then proceed to insta
 
 * Local sites can have the same name for VHost, Site folder, theme folder, Datanase name, Database user
 
+## lazywp-dbexport
 
+1. Goes to the project folder and creates a DB backup
 
+Requires wp-cli
 
+#### Example
+
+	lazywp-dbexport portfolio
+
+# Drupal related scripts
+
+## lazydrupal-install
+
+1. Installs & Configures a local Drupal site
+
+#### Example
+
+	lazydrupal-install portfolio
 
