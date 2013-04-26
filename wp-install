@@ -34,7 +34,7 @@ else
 			echo -e "--- getting the latest WordPress and extracting files."
 
 			mv $APACHE_VHOSTS_ROOT_DIR$1/wordpress/wp-content $APACHE_VHOSTS_ROOT_DIR$1/content
-			echo -e "--- wp-content folder moved outside wordpress folder."
+			echo -e "--- wp-content folder moved outside WordPress folder."
 
 			# Create wp-config
 			{
@@ -60,7 +60,7 @@ else
 			} > $APACHE_VHOSTS_ROOT_DIR$1/wordpress/wp-config.php
 			echo -e "--- wp-config created."
 			
-			# Create additional index.php file outside the wordpress folder
+			# Create additional index.php file outside the WordPress folder
 			{
 				echo "<?php"
 				echo "define('WP_USE_THEMES', true);"
