@@ -1,33 +1,9 @@
-## Scripts
+# Scripts
+These are some useful scripts I wrote to automate configuration work.
 
-### create-vhost
+## Global variables
 
-1. Creates a site folder
-2. Setup & configuration of apache vhosts
-3. Adds the vhost name to the hosts file
-
-Used in `wp-install`
-
-### wp-install
-
-1. Downloads, Configures and installs latest version of WordPress
-2. Installs and Activates a custom theme.
-
-Uses both `create-vhost` and `consular-install-project`
-
-### consular-install-project
-
-1. Creates a new Consular project for `wp-install`
-
-## Assumptions
-
-* Local sites can have the same name for VHost, Site folder, theme folder, Datanase name, Database user
-* Apache uses VHosts
-* Apache uses single VHost file for each VHost
-
-## Global variables needed
-
-You need these variables in your bash environment:
+Most scripts use these variables. Variable names should be self-explanatory.
 
 	# Custom global vars
 
@@ -44,4 +20,48 @@ You need these variables in your bash environment:
 	export DEFAULT_WORDPRESS_USER_NAME='...'
 	export DEFAULT_WORDPRESS_USER_EMAIL='...'
 	export DEFAULT_WORDPRESS_USER_PASS='...'
+
+
+## create-vhost
+
+1. Creates a site folder
+2. Setup & configuration of apache vhosts
+3. Adds the vhost name to the hosts file
+
+#### Example
+
+	create-vhost portfolio
+
+This will create folder and setup a Vhost for 'portfolio'. Look at the source for more details.
+
+#### Assumptions
+
+* Local sites can have the same name for VHost, Site folder, theme folder, Datanase name, Database user
+* Apache uses VHosts
+* Apache uses single VHost file for each VHost
+
+## consular-install-project
+
+1. Creates a new Consular project that is dependant in the folder structure used in `wp-install`
+
+## wp-install
+
+1. Downloads, Configures and installs latest version of WordPress
+2. Installs and Activates a custom theme.
+
+Uses both `create-vhost` and `consular-install-project`
+
+#### Example
+
+	wp-install portfolio
+
+This will create and configure a VHost for 'portfolio' and then proceed to install and configure a WordPress there.
+
+#### Assumptions
+
+* Local sites can have the same name for VHost, Site folder, theme folder, Datanase name, Database user
+
+
+
+
 
