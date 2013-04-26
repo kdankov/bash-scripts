@@ -1,12 +1,12 @@
 #!/bin/bash
 
-site_db=$1			# Name of the MySQL wordpress database
-site_db_user=$1		# Database user account
-
 if [ -z "$1" ] # Is parameter #1 zero length?
 then
-	echo -e "Error: drupal-install requires site name to be specified. \n"
+	echo -e "\n Error: requires site name to be specified. \n"
 else
+
+	site_db=$1			# Name of the MySQL wordpress database
+	site_db_user=$1		# Database user account
 
 	if [ -d $MYSQL_DATA_DIR$site_db ]
 	then

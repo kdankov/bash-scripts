@@ -1,12 +1,12 @@
 #!/bin/bash
 
-site_db=$1			# Name of the MySQL wordpress database
-site_db_user=$1		# Database user account
-
 if [ -z "$1" ] # Is parameter #1 zero length?
 then
-	echo -e "Error: wp-install requires site name to be specified. \n"
+	echo -e "\n Error: requires site name to be specified. \n"
 else
+
+	site_db=$1			# Name of the MySQL wordpress database
+	site_db_user=$1		# Database user account
 
 	if [ -d $MYSQL_DATA_DIR$site_db ]
 	then
@@ -20,7 +20,7 @@ else
 
 			cwd=${PWD#*/}
 
-			create-vhost $1
+			lazyvhost-create $1
 			
 			echo -e "Installing WordPress ...\n"
 
@@ -103,8 +103,10 @@ else
 			
 			echo -e "WordPress installation & configuration - Finished! \n"
 			
-			consular-install-project $1
+			lazyconsular-installproject $1
+			echo -e "Consular project created. \n"
 
+			echo -e "Opening site in the default browser. \n"
 			open 'http://'$1'/'
 			open 'http://'$1'/wordpress/wp-admin'
 
