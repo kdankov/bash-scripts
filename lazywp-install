@@ -28,7 +28,7 @@ else
 
 			cp ${APACHE_VHOSTS_ROOT_DIR}latest.tar.gz $APACHE_VHOSTS_ROOT_DIR$1
 			cd $APACHE_VHOSTS_ROOT_DIR$1
-			# wget http://wordpress.org/latest.tar.gz
+			wget http://wordpress.org/latest.tar.gz
 			tar xzf $APACHE_VHOSTS_ROOT_DIR$1/latest.tar.gz > /dev/null 2>&1 && 
 			rm $APACHE_VHOSTS_ROOT_DIR$1/latest.tar.gz
 			echo -e "--- getting the latest WordPress and extracting files."
