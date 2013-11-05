@@ -1,41 +1,50 @@
 #!/bin/bash
 
-if [ -z "$1" ] # Is parameter 1 zero length?
-then
-	echo -e "Error: crete_vhost requires a site name to be specified."
-else
-	if [ -d "$APACHE_VHOSTS_ROOT_DIR$1" ] # Does the new VHost directory already exists?
+	MSG_INSTALL_ABORTED="Installation aborted."
+
+	echo -e "==============================================================================="
+	echo -e "=== LazyVHost Create - Fast and easy VHost management = = = = = ==============="
+	echo -e "==============================================================================="
+
+	# Is parameter 1 zero length?
+	if [ -z "$1" ]
+	then
+		echo -e "ERROR: Requires one attribute."
+		echo -e "=== ${MSG_INSTALL_ABORTED} ===================================================== \n"
+		exit 1
+	fi
+
+	# Does the new VHost directory already exists?
+	if [ -d "$APACHE_VHOSTS_ROOT_DIR$1" ] 
 	then 
-		echo -e 'Error: Site directory already exists! Cannot create new VHost. \n'
-	else	
-		echo -e "\nVirtual Host & Server configuration ...\n"
+		echo -e '=== ERROR: Site directory already exists! Cannot create new VHost. \n'
+		echo -e "=== ${MSG_INSTALL_ABORTED} ===================================================== \n"
+		exit 1
+	fi
 
-		mkdir $APACHE_VHOSTS_ROOT_DIR$1
-		
-		#echo '127.0.0.1	'$1 | sudo tee -a /etc/hosts
-		
-		sudo sh -c "echo '127.0.0.1	'$1 >> /etc/hosts" # Add the site to the local hosts file
+	mkdir $APACHE_VHOSTS_ROOT_DIR$1
 
-		echo -e "--- hosts file updated."
+	{ # Create the VHost file
+		echo '<VirtualHost *:80>'
+		echo '	DocumentRoot "'$APACHE_VHOSTS_ROOT_DIR$1'"'
+		echo '	ServerName '$1
+		echo '	<Directory '$APACHE_VHOSTS_ROOT_DIR$1'>'
+		echo '		Options FollowSymLinks'
+		echo '		AllowOverride All'
+		echo '		Order deny,allow'
+		echo '		Allow from all'
+		echo '	</Directory>'
+		echo '</VirtualHost>'
+	} > $APACHE_VHOSTS_ROOT_DIR$1.conf
 
-		{ # Create the VHost file
-			echo '<VirtualHost *:80>'
-			echo '	DocumentRoot "'$APACHE_VHOSTS_ROOT_DIR$1'"'
-			echo '	ServerName '$1
-			echo '	<Directory '$APACHE_VHOSTS_ROOT_DIR$1'>'
-			echo '		Options FollowSymLinks'
-			echo '		AllowOverride All'
-			echo '		Order deny,allow'
-			echo '		Allow from all'
-			echo '	</Directory>'
-			echo '</VirtualHost>'
-		} > $APACHE_VHOSTS_ROOT_DIR$1.conf
-		sudo mv $APACHE_VHOSTS_ROOT_DIR$1.conf $APACHE_VHOSTS_CONF_DIR
-		echo -e "--- vhost file created."
+	sudo mv $APACHE_VHOSTS_ROOT_DIR$1.conf $APACHE_VHOSTS_CONF_DIR
 
-		sudo apachectl graceful # ! Warning - this is OS X specific
-		echo -e "--- Apache restarted.\n"
-		
-		echo -e "Virtual Host & Server configuration - Finished! \n"
-	fi	
-fi
+	echo -e "=== VHost file created"
+
+	# Add the site to the local hosts file
+	sudo sh -c "echo '127.0.0.1	'$1 >> $HOSTS_FILE"
+
+	echo -e "=== hosts file updated"
+	echo -e "=== Restarting Apache server ... \n"
+	sudo apachectl graceful # ! Warning - this is OS X specific
+	echo -e "=== Virtual Host & Server configuration - Finished successfully \n"
