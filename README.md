@@ -7,6 +7,8 @@ Most scripts use these variables. Variable names should be self-explanatory.
 
 	# Custom global vars
 
+	export HOSTS_FILE='/etc/hosts'
+
 	export APACHE_VHOSTS_ROOT_DIR='...'
 	export APACHE_VHOSTS_CONF_DIR='...'
 
