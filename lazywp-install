@@ -45,7 +45,7 @@
 		exit 1
 	fi
 
-	./lazyvhost-create $1
+	lazyvhost-create $1
 
 	echo -e "=== Installing WordPress ..."
 	echo -e "=== Downloading latest WordPress and extracting files."
