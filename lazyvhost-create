@@ -2,9 +2,7 @@
 
 	MSG_INSTALL_ABORTED="Installation aborted."
 
-	echo -e "==============================================================================="
-	echo -e "=== LazyVHost Create - Fast and easy VHost management = = = = = ==============="
-	echo -e "==============================================================================="
+	echo -e "=== Virtual Host & Server configuration \n"
 
 	# Is parameter 1 zero length?
 	if [ -z "$1" ]

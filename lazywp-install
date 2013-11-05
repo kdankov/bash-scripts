@@ -114,7 +114,7 @@
 	cd $APACHE_VHOSTS_ROOT_DIR$1/wordpress
 	wp core install --url=$APACHE_VHOSTS_ROOT_DIR$1/wordpress --title=$1 --admin_name=$DEFAULT_WORDPRESS_USER_NAME --admin_email=$DEFAULT_WORDPRESS_USER_EMAIL --admin_password=$DEFAULT_WORDPRESS_USER_PASS > /dev/null 2>&1
 
-	echo -e "=== Custom WordPress configuration finished"
+	echo -e "=== Custom WordPress configuration finished \n"
 
 	#creation of a bare-bones development theme
 	#cd $APACHE_VHOSTS_ROOT_DIR$1/content/themes
@@ -131,7 +131,7 @@
 	# get back to the initial directory
 	cd /${cwd}
 
-	echo -e "WordPress installation & configuration - Finished! \n"
+	echo -e "=== DONE! WordPress installation & configuration - Finished! \n"
 
 	if [ $USE_CONSULAR = 1 ]
 	then
@@ -148,6 +148,6 @@
 	echo -e "=== Local installation - VHost file - $APACHE_VHOSTS_CONF_DIR$1"
 	echo -e "=== Local installation - Site root - $APACHE_VHOSTS_ROOT_DIR$1"
 	echo -e "=== Local installation - wp.config.php - $APACHE_VHOSTS_ROOT_DIR$1/wp-config.php"
-	echo -e "=== Local installation - Address -	http://$1/"
+	echo -e "=== Local installation - Address - http://$1/"
 	echo -e "=== Local installation - WP-ADMIN - http://$1/wordpress/wp-admin"
 	echo -e "=============================================================================== \n"
