@@ -116,18 +116,6 @@
 
 	echo -e "=== Custom WordPress configuration finished \n"
 
-	#creation of a bare-bones development theme
-	#cd $APACHE_VHOSTS_ROOT_DIR$1/content/themes
-	#cp $APACHE_VHOSTS_ROOT_DIR/wp_theme_template.zip .
-	#tar xf wp_theme_template.zip > /dev/null 2>&1 &&
-	#mv wp_theme_template $1
-
-	# cleanup the zip
-	#rm wp_theme_template.zip
-
-	#wp theme activate "$1" > /dev/null 2>&1
-	#echo -e "--- default development theme created and activated. \n"
-
 	# get back to the initial directory
 	cd /${cwd}
 
