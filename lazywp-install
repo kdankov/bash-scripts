@@ -115,7 +115,12 @@
 	wp core install --url=$APACHE_VHOSTS_ROOT_DIR$1/wordpress --title=$1 --admin_name=$DEFAULT_WORDPRESS_USER_NAME --admin_email=$DEFAULT_WORDPRESS_USER_EMAIL --admin_password=$DEFAULT_WORDPRESS_USER_PASS > /dev/null 2>&1
 
 	echo -e "=== Custom WordPress configuration finished \n"
+	
+	wp scaffold _s $1
+	wp theme activate $1
 
+	echo -e "=== Custom WordPress configuration finished \n"
+	
 	# get back to the initial directory
 	cd /${cwd}
 
