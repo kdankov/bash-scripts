@@ -1,0 +1,24 @@
+#!/bin/bash
+
+	server=minerva
+	defaultpass=LelEMa1e
+
+	if [ -z "$1" ] # Is parameter #1 zero length?
+	then
+		echo -e "=== ERROR: Requires one argument. Site name has to be specified."
+		exit 1
+	fi
+
+	ssh root@$server "useradd -m $1 && echo -e '$defaultpass\n$defaultpass' | passwd $1"
+	install-key $1@$server
+
+	ssh $1@$server "mkdir repo && mkdir site && cd repo && mkdir $1.git && cd $1.git && git init --bare"
+	
+	{
+		echo "#!/bin/sh"
+		echo "git --work-tree=/home/$1/site --git-dir=/home/$1/repo/$1.git checkout -f"
+	} > post-receive
+
+	scp post-receive $1@$server:repo/$1.git/hooks
+	ssh $1@$server "cd repo/$1.git && chmod +x post-receive"
+	rm post-recieve
