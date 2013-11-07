@@ -1,0 +1,49 @@
+#!/bin/bash
+
+	echo -e "==============================================================================="
+	echo -e "=== Lazy Project Create - Remote = = = = = = = = = = = = = = = = =============="
+	echo -e "=============================================================================== \n"
+
+	if [ -z "$1" ] # Is parameter #1 zero length?
+	then
+		echo -e "=== ERROR: Requires at least one argument. Site name has to be specified."
+		exit 1
+	fi
+
+	MSG_INSTALL_ABORTED="Installation aborted."
+
+	server=minerva
+	defaultpass=LelEMa1e
+	site_db=$1		# Name of the MySQL wordpress database
+	site_db_user=$1	# Database user account
+	cwd=${PWD#*/}
+
+	{
+		cat ~/.ssh/id_rsa.pub 
+	} > authorized_keys
+
+	# User creation & Authentication setup
+	ssh root@$server "useradd -m $1 && echo -e '$defaultpass\n$defaultpass' | passwd $1" > /dev/null 2>&1
+	echo -e "=== User $1 created on server: $server"
+	
+	sshpass -p $defaultpass ssh $1@$server "mkdir -p .ssh" > /dev/null 2>&1
+	sshpass -p $defaultpass scp authorized_keys $1@$server:.ssh > /dev/null 2>&1
+	sshpass -p $defaultpass ssh $1@$server "chmod go-w .ssh && chmod 600 .ssh/authorized_keys"
+	echo -e "=== SSH Keys authentication config finished"
+
+	ssh $1@$server "mkdir repo && mkdir site && cd repo && mkdir $1.git && cd $1.git && git init --bare"  > /dev/null 2>&1
+	
+	{
+		echo "#!/bin/sh"
+		echo "git --work-tree=/home/$1/site --git-dir=/home/$1/repo/$1.git checkout -f"
+	} > post-receive
+
+	scp post-receive $1@$server:repo/$1.git/hooks  > /dev/null 2>&1
+	ssh $1@$server "cd repo/$1.git/hooks && chmod +x post-receive"
+	echo -e "=== Git repo config finished"
+
+	# Cleaning up ...
+	rm post-receive
+	rm authorized_keys
+
+	echo -e "=== Remote job - finished \n"
