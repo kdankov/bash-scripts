@@ -22,6 +22,20 @@
 		cat ~/.ssh/id_rsa.pub 
 	} > authorized_keys
 
+	{ 	
+		echo '<VirtualHost *:80>'
+		echo '	DocumentRoot "'/home/$1/site/htdocs'"'
+		echo "	ServerName ($1).test.rhyndo.com"
+		echo '	SetEnv APPLICATION_ENV staging'
+		echo '	<Directory '/home/$1/site/htdocs'>'
+		echo '		Options FollowSymLinks'
+		echo '		AllowOverride All'
+		echo '		Order deny,allow'
+		echo '		Allow from all'
+		echo '	</Directory>'
+		echo '</VirtualHost>'
+	} > $1.conf
+
 	# User creation & Authentication setup
 	ssh root@$server "useradd -m $1 && echo -e '$defaultpass\n$defaultpass' | passwd $1" > /dev/null 2>&1
 	echo -e "=== User $1 created on server: $server"
@@ -43,6 +57,7 @@
 	echo -e "=== Git repo config finished"
 
 	# Cleaning up ...
+	#rm $1.conf
 	rm post-receive
 	rm authorized_keys
 

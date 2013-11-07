@@ -13,6 +13,7 @@
 	MSG_INSTALL_ABORTED="Installation aborted."
 
 	server=minerva
+	defaultpass=LelEMa1e
 	site_db=$1		# Name of the MySQL wordpress database
 	site_db_user=$1	# Database user account
 	cwd=${PWD#*/}
@@ -62,6 +63,7 @@
 	mkdir htdocs
 	mkdir htdocs/wordpress
 	mkdir config
+	mkdir config/env
 	mkdir scripts
 	mkdir database
 
@@ -69,6 +71,7 @@
 		echo '<VirtualHost *:80>'
 		echo '	DocumentRoot "'$APACHE_VHOSTS_ROOT_DIR$1/htdocs'"'
 		echo '	ServerName '$1
+		echo '	SetEnv APPLICATION_ENV development'
 		echo '	<Directory '$APACHE_VHOSTS_ROOT_DIR$1/htdocs'>'
 		echo '		Options FollowSymLinks'
 		echo '		AllowOverride All'
@@ -100,6 +103,67 @@
 	} > .gitignore
 	chmod 755 .gitignore
 
+	{
+		echo "<?php"
+		echo "define('DB_NAME', '"$site_db"');"
+		echo "define('DB_USER', '"$site_db_user"');"
+		echo "define('DB_PASSWORD', '"$DEFAULT_MYSQL_USER_PASS"');"
+		echo "define('DB_HOST', '"$MYSQL_HOST"');"
+		echo "define('DB_CHARSET', 'utf8');"
+		echo ""
+		echo "define('WP_DEBUG', true);"
+		echo ""
+		echo "define('EMPTY_TRASH_DAYS', 5 );"
+		echo ""
+		echo "define('WP_POST_REVISIONS', 10);"
+		echo "define('WP_HOME', 'http://"$1"');"
+		echo "define('WP_SITEURL', 'http://"$1"/wordpress');"
+		echo "define('WP_CONTENT_DIR', '"$APACHE_VHOSTS_ROOT_DIR$1"/htdocs/content');"
+		echo "define('WP_CONTENT_URL', 'http://"$1"/content');"
+	} > config/env/development.php
+	chmod 755 config/env/development.php
+
+	{
+		echo "<?php"
+		echo "define('DB_NAME', '"$site_db"');"
+		echo "define('DB_USER', '"$site_db_user"');"
+		echo "define('DB_PASSWORD', '"$DEFAULT_MYSQL_USER_PASS"');"
+		echo "define('DB_HOST', '"$MYSQL_HOST"');"
+		echo "define('DB_CHARSET', 'utf8');"
+		echo ""
+		echo "define('WP_DEBUG', false);"
+		echo ""
+		echo "define('EMPTY_TRASH_DAYS', 30 );  // 30 days"
+		echo "define('DISALLOW_FILE_MODS',true); // Disable Plugin and Theme Update and Installation"
+		echo ""
+		echo "define('WP_POST_REVISIONS', 20); // Specify the Number of Post Revisions"
+		echo "define('WP_HOME', 'http://"$1".test.rhyndo.com');"
+		echo "define('WP_SITEURL', 'http://"$1".test.rhyndo.com/wordpress');"
+		echo "define('WP_CONTENT_DIR', '"$APACHE_VHOSTS_ROOT_DIR$1"/htdocs/content');"
+		echo "define('WP_CONTENT_URL', 'http://"$1".test.rhyndo.com/content');"
+	} > config/env/staging.php
+	chmod 755 config/env/staging.php
+
+	{
+		echo "<?php"
+		echo "define('DB_NAME', '"$site_db"');"
+		echo "define('DB_USER', '"$site_db_user"');"
+		echo "define('DB_PASSWORD', '"$DEFAULT_MYSQL_USER_PASS"');"
+		echo "define('DB_HOST', '"$MYSQL_HOST"');"
+		echo "define('DB_CHARSET', 'utf8');"
+		echo ""
+		echo "define('WP_DEBUG', false);"
+		echo ""
+		echo "define('EMPTY_TRASH_DAYS', 30 );  // 30 days"
+		echo "define('DISALLOW_FILE_MODS',true); // Disable Plugin and Theme Update and Installation"
+		echo ""
+		echo "define('WP_POST_REVISIONS', 20); // Specify the Number of Post Revisions"
+		echo "define('WP_HOME', 'http://"$1".test.rhyndo.com');"
+		echo "define('WP_SITEURL', 'http://"$1".test.rhyndo.com/wordpress');"
+		echo "define('WP_CONTENT_DIR', '"$APACHE_VHOSTS_ROOT_DIR$1"/htdocs/content');"
+		echo "define('WP_CONTENT_URL', 'http://"$1".test.rhyndo.com/content');"
+	} > config/env/live.php
+	chmod 755 config/env/live.php
 	cd htdocs
 
 	{
@@ -127,21 +191,18 @@
 	# Create wp-config
 	{
 		echo "<?php"
-		echo "define('DB_NAME', '"$site_db"');"
-		echo "define('DB_USER', '"$site_db_user"');"
-		echo "define('DB_PASSWORD', '"$DEFAULT_MYSQL_USER_PASS"');"
-		echo "define('DB_HOST', '"$MYSQL_HOST"');"
-		echo "define('DB_CHARSET', 'utf8');"
-		echo "define('EMPTY_TRASH_DAYS', 30 );  // 30 days"
-		echo "define('DISALLOW_FILE_MODS',true); // Disable Plugin and Theme Update and Installation"
-		echo "define('WP_POST_REVISIONS', 20); // Specify the Number of Post Revisions"
-		echo "define('WP_HOME', 'http://"$1"');"
-		echo "define('WP_SITEURL', 'http://"$1"/wordpress');"
-		echo "define('WP_CONTENT_DIR', '"$APACHE_VHOSTS_ROOT_DIR$1"/htdocs/content');"
-		echo "define('WP_CONTENT_URL', 'http://"$1"/content');"
-		echo '$table_prefix  = "wp_";'
+		echo "define('APP_ROOT', dirname(__DIR__));"
+		echo "define('APP_ENV', getenv('APPLICATION_ENV'));"
+		echo ""
 		echo "define('WPLANG', '');"
-		echo "define('WP_DEBUG', true);"
+		echo ""
+		echo "if (file_exists(APP_ROOT . 'config/env/local.php')) {"
+		echo "	require APP_ROOT . 'config/env/local.php';"
+		echo "} else {"
+		echo "	require APP_ROOT . 'config/env/' . APP_ENV . '.php';"
+		echo "}"
+		echo ""
+		echo '$table_prefix  = "wp_";'
 		echo "if ( !defined('ABSPATH') )"
 		echo "	define('ABSPATH', dirname(__FILE__) . '/');"
 		echo "	require_once(ABSPATH . 'wp-settings.php');"
