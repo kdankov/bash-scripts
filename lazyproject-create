@@ -62,68 +62,7 @@
 		exit 1
 	fi
 
-	{
-		cat ~/.ssh/id_rsa.pub 
-	} > authorized_keys
-
-	{ 	
-		echo '<VirtualHost *:80>'
-		echo '	DocumentRoot "'/home/$1/site/htdocs'"'
-		echo "	ServerName $1.test.rhyndo.com"
-		echo '	SetEnv APPLICATION_ENV staging'
-		echo '	<Directory '/home/$1/site/htdocs'>'
-		echo '		Options FollowSymLinks'
-		echo '		AllowOverride All'
-		echo '		Order deny,allow'
-		echo '		Allow from all'
-		echo '	</Directory>'
-		echo '</VirtualHost>'
-	} > $1.conf
-
-	# User creation & Authentication setup
-	ssh root@$server "useradd -m $1 && echo -e '$defaultpass\n$defaultpass' | passwd $1" > /dev/null 2>&1
-	echo -e "=== User $1 created on server: $server"
-	
-	sshpass -p $defaultpass ssh $1@$server "mkdir -p .ssh" > /dev/null 2>&1
-	sshpass -p $defaultpass scp authorized_keys $1@$server:.ssh > /dev/null 2>&1
-	sshpass -p $defaultpass ssh $1@$server "chmod go-w .ssh && chmod 600 .ssh/authorized_keys"
-	echo -e "=== SSH Keys authentication config finished"
-
-	ssh $1@$server "mkdir repo && mkdir site && cd repo && mkdir $1.git && cd $1.git && git init --bare"  > /dev/null 2>&1
-	
-	{
-		echo "#!/bin/sh"
-		echo "git --work-tree=/home/$1/site --git-dir=/home/$1/repo/$1.git checkout -f"
-		echo "wp db export $db_remote_export_path/$1_$now_push.sql"
-		echo "chmod 755 $db_remote_export_path/$1_$now_push.sql"
-	} > post-receive
-
-	scp post-receive $1@$server:repo/$1.git/hooks  > /dev/null 2>&1
-	ssh $1@$server "cd repo/$1.git/hooks && chmod +x post-receive"
-	echo -e "=== Git repo config finished"
-
-	# Create DB and add privileges
-	ssh root@$server 'mysqladmin -u '$MINERVA_MYSQL_ROOT_USER' -p"'$MINERVA_MYSQL_ROOT_PASS'" create '$site_db'_staging'
-	{ 
-		echo "use mysql;"
-		echo grant all on ${site_db}_staging.* to ${site_db_user}_st@'localhost' identified by "'${MINERVA_DEFAULT_MYSQL_USER_PASS}';"
-		echo "flush privileges;"
-	} > sql.$$
-
-	scp sql.$$ root@$server: > /dev/null 2>&1
-	ssh root@$server 'mysql -u '$MINERVA_MYSQL_ROOT_USER' -p"'$MINERVA_MYSQL_ROOT_PASS'" '$site_db'_staging < /root/sql.'$$
-	ssh root@$server "rm /root/sql.$$"
-
-	scp $1.conf root@$server:/etc/httpd/conf.d/vhosts/ > /dev/null 2>&1
-
-	# Cleaning up ...
-	rm $1.conf
-	rm sql.$$
-	rm post-receive
-	rm authorized_keys
-
-	echo -e "=== Remote setup - finished \n"
-
+	#---------- CHECKS DONE
 	# Local installation starts
 	mkdir $APACHE_VHOSTS_ROOT_DIR$1
 	cd $APACHE_VHOSTS_ROOT_DIR$1
@@ -135,6 +74,15 @@
 	mkdir scripts
 	mkdir database
 
+	# Download latest stable WordPress release - if the download fails the script fails
+	cd htdocs/wordpress
+	wp core download | grep 'Success' > /dev/null 2>&1
+	if [ $? != 0 ]
+	then
+		exit 1
+	fi
+	cd ../..
+	
 	{ 	
 		echo '<VirtualHost *:80>'
 		echo '	DocumentRoot "'$APACHE_VHOSTS_ROOT_DIR$1/htdocs'"'
@@ -243,14 +191,6 @@
 	} > wp-cli.local.yml
 	chmod 755 wp-cli.local.yml
 
-	# Download latest stable WordPress release
-	cd wordpress
-	wp core download | grep 'Success' > /dev/null 2>&1
-	if [ $? != 0 ]
-	then
-		exit 1
-	fi
-	cd ..
 
 	# Move wp-content outside and rename it
 	mv wordpress/wp-content content
@@ -307,8 +247,7 @@
 	echo -e "=== Database created successfully"
 
 	# Install WordPress database tables and an admin account
-	wp core install --url=$APACHE_VHOSTS_ROOT_DIR$1/htdocs/wordpress --title=$1 --admin_name=$DEFAULT_WORDPRESS_USER_NAME --admin_email=$DEFAULT_WORDPRESS_USER_EMAIL --admin_password=$DEFAULT_WORDPRESS_USER_PASS 
-	#> /dev/null 2>&1
+	wp core install --url=$APACHE_VHOSTS_ROOT_DIR$1/htdocs/wordpress --title=$1 --admin_name=$DEFAULT_WORDPRESS_USER_NAME --admin_email=$DEFAULT_WORDPRESS_USER_EMAIL --admin_password=$DEFAULT_WORDPRESS_USER_PASS > /dev/null 2>&1
 
 	echo -e "=== Custom WordPress configuration finished \n"
 
@@ -316,6 +255,72 @@
 	wp db export $db_local_export_path/$1_$now_init.sql > /dev/null 2>&1
 	chmod 755 $db_local_export_path/$1_$now_init.sql
 	echo -e "=== Database backup created \n"
+
+	# Remote part starting
+	{
+		cat ~/.ssh/id_rsa.pub 
+	} > authorized_keys
+
+	{ 	
+		echo '<VirtualHost *:80>'
+		echo '	DocumentRoot "'/home/$1/site/htdocs'"'
+		echo "	ServerName $1.test.rhyndo.com"
+		echo '	SetEnv APPLICATION_ENV staging'
+		echo '	<Directory '/home/$1/site/htdocs'>'
+		echo '		Options FollowSymLinks'
+		echo '		AllowOverride All'
+		echo '		Order deny,allow'
+		echo '		Allow from all'
+		echo '	</Directory>'
+		echo '</VirtualHost>'
+	} > $1.conf
+
+
+	# User creation & Authentication setup
+	ssh root@$server "useradd -m $1 && echo -e '$defaultpass\n$defaultpass' | passwd $1" > /dev/null 2>&1
+	ssh root@$server "chmod 755 /home/$1" > /dev/null 2>&1
+	echo -e "=== User $1 created on server: $server"
+	
+	sshpass -p $defaultpass ssh $1@$server "mkdir -p .ssh" > /dev/null 2>&1
+	sshpass -p $defaultpass scp authorized_keys $1@$server:.ssh > /dev/null 2>&1
+	sshpass -p $defaultpass ssh $1@$server "chmod go-w .ssh && chmod 600 .ssh/authorized_keys"
+	echo -e "=== SSH Keys authentication config finished"
+
+	ssh $1@$server "mkdir repo && mkdir site && cd repo && mkdir $1.git && cd $1.git && git init --bare"  > /dev/null 2>&1
+	
+	{
+		echo "#!/bin/sh"
+		echo 'now=`date +"%m_%d_%Y_%T"`'
+		echo "cd /home/$1/site/htdocs && wp db export $db_remote_export_path/${1}_"$now"_autoexport.sql"
+		echo "chmod 755 $db_remote_export_path/${1}_"$now"_autoexport.sql"
+		echo "git --work-tree=/home/$1/site --git-dir=/home/$1/repo/$1.git checkout -f"
+	} > post-receive
+
+	scp post-receive $1@$server:repo/$1.git/hooks  > /dev/null 2>&1
+	ssh $1@$server "cd repo/$1.git/hooks && chmod +x post-receive"
+	echo -e "=== Git repo config finished"
+
+	# Create DB and add privileges
+	ssh root@$server 'mysqladmin -u '$MINERVA_MYSQL_ROOT_USER' -p"'$MINERVA_MYSQL_ROOT_PASS'" create '$site_db'_staging'
+	{ 
+		echo "use mysql;"
+		echo grant all on ${site_db}_staging.* to ${site_db_user}_st@'localhost' identified by "'${MINERVA_DEFAULT_MYSQL_USER_PASS}';"
+		echo "flush privileges;"
+	} > sql.$$
+
+	scp sql.$$ root@$server: > /dev/null 2>&1
+	ssh root@$server 'mysql -u '$MINERVA_MYSQL_ROOT_USER' -p"'$MINERVA_MYSQL_ROOT_PASS'" '$site_db'_staging < /root/sql.'$$
+	ssh root@$server "rm /root/sql.$$"
+
+	scp $1.conf root@$server:/etc/httpd/conf.d/vhosts/ > /dev/null 2>&1
+
+	# Cleaning up ...
+	rm $1.conf
+	rm sql.$$
+	rm post-receive
+	rm authorized_keys
+
+	echo -e "=== Remote setup - finished \n"
 
 	#setup git deployment
 	cd ..
@@ -327,10 +332,14 @@
 
 	echo -e "=== Git repo created & remote added \n"
 	
-	ssh $1@$server "cd site/htdocs && wp core download && rm -rf wordpress/wp-content"
+	ssh $1@$server "cd site/htdocs && wp core download > /dev/null 2>&1 && rm -rf wordpress/wp-content"
 	ssh $1@$server "cd site/config/env && cp staging.php local.php"
-	ssh $1@$server "wp db import ../database/"$1"_.sql"
+	ssh $1@$server "cd /home/$1/site/htdocs && wp db import ../database/"$1"_.sql > /dev/null 2>&1"
+	echo -e "=== Local database successfully imported on the server"
 	
+	ssh root@$server "apachectl graceful"
+	echo -e "=== Server Apache restarted \n"
+
 	# get back to the initial directory
 	cd /${cwd}
 
@@ -341,10 +350,6 @@
 		#lazyconsular-installproject $1
 	#fi
 
-	ssh root@$server "apachectl graceful"
-
-	echo -e "=== Installing database ... \n"
-	
 	echo -e "=== Opening sites in the default browser ... \n"
 
 	open 'http://'$1'/'
