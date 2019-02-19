@@ -1,0 +1,293 @@
+#!/bin/bash
+
+	echo -e "==============================================================================="
+	echo -e "=== Lazy Project Create - Development + Staging - Automation system = = = ====="
+	echo -e "=============================================================================== \n"
+
+	if [ -z "$1" ] # Is parameter #1 zero length?
+	then
+		echo -e "=== ERROR: Requires at least one argument. Site name has to be specified."
+		exit 1
+	fi
+
+	MSG_INSTALL_ABORTED="Installation aborted."
+	MINERVA_MYSQL_ROOT_USER=root
+	MINERVA_MYSQL_ROOT_PASS=Orpingt0nski
+	MINERVA_DEFAULT_MYSQL_USER_PASS=M0nSters
+
+	server=minerva
+	defaultpass=LelEMa1e
+	site_db=$1		# Name of the MySQL wordpress database
+	site_db_user=$1	# Database user account
+	cwd=${PWD#*/}
+	now=`date +"%m_%d_%Y_%T"`
+	db_local_export_path=$APACHE_VHOSTS_ROOT_DIR$1/database
+	db_remote_export_path=/home/$1/site/database
+
+	# Check that wp-cli is installed
+	hash wp &> /dev/null
+	if [ $? -eq 1 ]; then
+		echo >&2 "=== ERROR: wp-cli is required. Check http://wp-cli.org for more information."
+		echo -e "\n=== Just execute the following command in your terminal: \n"
+		echo -e "    curl https://raw.github.com/wp-cli/wp-cli.github.com/master/installer.sh | bash \n"
+		echo -e "    (Make sure to read the instructions) \n"
+		echo -e "=== ${MSG_INSTALL_ABORTED} ===================================================== \n"
+		exit 1
+	fi
+
+	# Check that the MySQL server us running
+	UP=$(pgrep mysql | wc -l);
+	if [ "$UP" -ne 1 ];
+	then
+		echo -e "=== ERROR: MySQL not running!\n"
+		echo -e "=== This script needs MySQL running in order to install and configure"
+		echo -e "=== the WordPress database. \n"
+		echo -e "=== ${MSG_INSTALL_ABORTED} ===================================================== \n"
+		exit 1
+	fi
+
+	# Check that the Database the script is about to create doesn't exist
+	if [ -d $MYSQL_DATA_DIR$site_db ]
+	then
+		echo -e "=== ERROR: Database '$site_db' aready exists! \n"
+		echo -e "=== ${MSG_INSTALL_ABORTED} ===================================================== \n"
+		exit 1
+	fi
+
+	# Does the new VHost directory already exists?
+	if [ -d "$APACHE_VHOSTS_ROOT_DIR$1" ] 
+	then 
+		echo -e '=== ERROR: Site directory already exists! Cannot create new VHost. \n'
+		echo -e "=== ${MSG_INSTALL_ABORTED} ===================================================== \n"
+		exit 1
+	fi
+
+	#---------- CHECKS DONE
+	# Local installation starts
+	mkdir $APACHE_VHOSTS_ROOT_DIR$1
+	cd $APACHE_VHOSTS_ROOT_DIR$1
+	
+	mkdir htdocs
+	mkdir htdocs/wordpress
+	mkdir config
+	mkdir config/env
+	mkdir scripts
+	mkdir database
+
+	# Download latest stable WordPress release - if the download fails the script fails
+	cd htdocs/wordpress
+	wp core download | grep 'Success' > /dev/null 2>&1
+	if [ $? != 0 ]
+	then
+		exit 1
+	fi
+	cd ../..
+	
+	{ 	
+		echo '<VirtualHost *:80>'
+		echo '	DocumentRoot "'$APACHE_VHOSTS_ROOT_DIR$1/htdocs'"'
+		echo '	ServerName '$1
+		echo '	SetEnv APPLICATION_ENV development'
+		echo '	<Directory '$APACHE_VHOSTS_ROOT_DIR$1/htdocs'>'
+		echo '		Options FollowSymLinks'
+		echo '		AllowOverride All'
+		echo '		Order deny,allow'
+		echo '		Allow from all'
+		echo '	</Directory>'
+		echo '</VirtualHost>'
+	} > /Users/koko/Sites/_vhosts/$1.conf
+
+	echo -e "=== VHost file created"
+
+	# Add the site to the local hosts file
+	sudo sh -c "echo '127.0.0.1	'$1 >> $HOSTS_FILE"
+	echo -e "=== hosts file updated"
+
+	sudo apachectl -k stop > /dev/null 2>&1
+	sudo apachectl -k start > /dev/null 2>&1
+
+	echo -e "=== Apache server restarted ... \n"
+	echo -e "=== Virtual Host & Server configuration - Finished successfully \n"
+
+	echo -e "=== Installing WordPress ..."
+	echo -e "=== Downloading latest WordPress and extracting files."
+	
+	{
+		echo 'htdocs/wordpress'
+		echo 'htdocs/content/plugins'
+		echo 'htdocs/content/uploads'
+		echo 'htdocs/content/upgrade'
+		echo 'content/themes/twentytwelve'
+		echo 'content/themes/twentythirteen'
+	} > .gitignore
+	chmod 755 .gitignore
+
+	{
+		echo "<?php"
+		echo "define('DB_NAME', '"$site_db"');"
+		echo "define('DB_USER', '"$site_db_user"');"
+		echo "define('DB_PASSWORD', '"$DEFAULT_MYSQL_USER_PASS"');"
+		echo "define('DB_HOST', '"$MYSQL_HOST"');"
+		echo "define('DB_CHARSET', 'utf8');"
+		echo ""
+		echo "define('WP_DEBUG', true);"
+		echo ""
+		echo "define('EMPTY_TRASH_DAYS', 5 );"
+		echo ""
+		echo "define('WP_POST_REVISIONS', 10);"
+		echo "define('WP_HOME', 'http://"$1"');"
+		echo "define('WP_SITEURL', 'http://"$1"/wordpress');"
+		echo "define('WP_CONTENT_DIR', '"$APACHE_VHOSTS_ROOT_DIR$1"/htdocs/content');"
+		echo "define('WP_CONTENT_URL', 'http://"$1"/content');"
+	} > config/env/development.php
+	chmod 755 config/env/development.php
+
+	{
+		echo "<?php"
+		echo "define('DB_NAME', '"$site_db"_staging');"
+		echo "define('DB_USER', '"$site_db_user"_st');"
+		echo "define('DB_PASSWORD', '"$MINERVA_DEFAULT_MYSQL_USER_PASS"');"
+		echo "define('DB_HOST', 'localhost');"
+		echo "define('DB_CHARSET', 'utf8');"
+		echo ""
+		echo "define('WP_DEBUG', false);"
+		echo ""
+		echo "define('EMPTY_TRASH_DAYS', 30 );  // 30 days"
+		echo "define('DISALLOW_FILE_MODS',true); // Disable Plugin and Theme Update and Installation"
+		echo ""
+		echo "define('WP_POST_REVISIONS', 20); // Specify the Number of Post Revisions"
+		echo "define('WP_HOME', 'http://"$1".test.rhyndo.com');"
+		echo "define('WP_SITEURL', 'http://"$1".test.rhyndo.com/wordpress');"
+		echo "define('WP_CONTENT_DIR', '/home/"$1"/site/htdocs/content');"
+		echo "define('WP_CONTENT_URL', 'http://"$1".test.rhyndo.com/content');"
+	} > config/env/staging.php
+	chmod 755 config/env/staging.php
+
+	{
+		echo "<?php"
+		echo "define('DB_NAME', '"$site_db"_live');"
+		echo "define('DB_USER', '"$site_db_user"_lv');"
+		echo "define('DB_PASSWORD', '"$MINERVA_DEFAULT_MYSQL_USER_PASS"');"
+		echo "define('DB_HOST', 'localhost');"
+		echo "define('DB_CHARSET', 'utf8');"
+		echo ""
+		echo "define('WP_DEBUG', false);"
+		echo ""
+		echo "define('EMPTY_TRASH_DAYS', 30 );  // 30 days"
+		echo "define('DISALLOW_FILE_MODS',true); // Disable Plugin and Theme Update and Installation"
+		echo ""
+		echo "define('WP_POST_REVISIONS', 20); // Specify the Number of Post Revisions"
+		echo "define('WP_HOME', 'http://"$1".test.rhyndo.com');"
+		echo "define('WP_SITEURL', 'http://"$1".test.rhyndo.com/wordpress');"
+		echo "define('WP_CONTENT_DIR', '/home/"$1"/site/htdocs/content');"
+		echo "define('WP_CONTENT_URL', 'http://"$1".test.rhyndo.com/content');"
+	} > config/env/live.php
+	chmod 755 config/env/live.php
+	cd htdocs
+
+	{
+		echo "path: wordpress"
+		echo "color: true"
+	} > wp-cli.local.yml
+	chmod 755 wp-cli.local.yml
+
+	# Move wp-content outside and rename it
+	mv wordpress/wp-content content
+
+	# Create media storage folder and set appropriate permissions
+	mkdir content/uploads
+	chmod 777 content/uploads
+
+	# Create wp-config
+	{
+		echo "<?php"
+		echo "define('APP_ROOT', dirname(__DIR__));"
+		echo "define('APP_ENV', getenv('APPLICATION_ENV'));"
+		echo ""
+		echo "define('WPLANG', '');"
+		echo ""
+		echo "if (file_exists(APP_ROOT . '/config/env/local.php')) {"
+		echo "	require APP_ROOT . '/config/env/local.php';"
+		echo "} else {"
+		echo "	if ( APP_ENV ) {"
+		echo "		require APP_ROOT . '/config/env/' . APP_ENV . '.php';"
+		echo "	} else {"
+		echo "		require APP_ROOT . '/config/env/development.php';"
+		echo "	}"
+		echo "}"
+		echo ""
+		echo '$table_prefix  = "wp_";'
+		echo "if ( !defined('ABSPATH') )"
+		echo "	define('ABSPATH', dirname(__FILE__) . '/');"
+		echo "	require_once(ABSPATH . 'wp-settings.php');"
+	} > wp-config.php
+	chmod 755 wp-config.php
+
+	# Create additional index.php file outside the WordPress folder
+	{
+		echo "<?php"
+		echo "define('WP_USE_THEMES', true);"
+		echo "require('./wordpress/wp-blog-header.php');"
+		echo "?>"
+	} > index.php
+	chmod 755 index.php
+
+	# Create DB and add privileges
+	mysqladmin -u $MYSQL_ROOT_USER -p"$MYSQL_ROOT_PASS" create $site_db > /dev/null 2>&1
+	{ 
+		echo "use mysql;"
+		echo grant all on ${site_db}.* to "$site_db_user"@'localhost' identified by "'${DEFAULT_MYSQL_USER_PASS}';"
+		echo "flush privileges;"
+	} > $APACHE_VHOSTS_ROOT_DIR$1/sql.$$
+	mysql -u $MYSQL_ROOT_USER -p"$MYSQL_ROOT_PASS" $site_db < $APACHE_VHOSTS_ROOT_DIR$1/sql.$$ > /dev/null 2>&1
+
+	# Remove the DB & DB User generation file
+	rm $APACHE_VHOSTS_ROOT_DIR$1/sql.$$
+	echo -e "=== Database created successfully"
+
+	# Install WordPress database tables and an admin account
+	wp core install --url=$APACHE_VHOSTS_ROOT_DIR$1/htdocs/wordpress --title=$1 --admin_name=$DEFAULT_WORDPRESS_USER_NAME --admin_email=$DEFAULT_WORDPRESS_USER_EMAIL --admin_password=$DEFAULT_WORDPRESS_USER_PASS > /dev/null 2>&1
+
+	echo -e "=== Custom WordPress configuration finished \n"
+
+	wp scaffold _s $1  > /dev/null 2>&1
+	wp theme activate $1  > /dev/null 2>&1
+
+	mkdir content/themes/$1/scss
+
+	sed 's/{site}/'$1'/g' ~/Sites/_scaffold/package.json > content/themes/$1/package.json
+	
+	cp ~/Sites/_scaffold/Gruntfile.js content/themes/$1
+	cp ~/Sites/_scaffold/theme.scss content/themes/$1/scss
+	cp ~/Sites/_scaffold/_typography.scss content/themes/$1/scss
+	cp ~/Sites/_scaffold/_reset.scss content/themes/$1/scss
+
+	cd content/themes/$1
+	npm install
+
+	git init
+
+	# get back to the initial directory
+	cd /${cwd}
+
+	echo -e "=== DONE! WordPress installation & configuration - Finished! \n"
+
+	if [ $USE_CONSULAR = 1 ]
+	then
+		lazyconsular-installproject $1
+	fi
+
+	echo -e "=== Opening sites in the default browser ... \n"
+
+	open 'http://'$1'/'
+	open 'http://'$1'/wordpress/wp-admin'
+
+	echo -e "==============================================================================="
+	echo -e "=== WordPress installation and configuration finished successfully  ==========="
+	echo -e "==============================================================================="
+	echo -e "=== Development env - VHost file - $APACHE_VHOSTS_CONF_DIR$1"
+	echo -e "=== Development env - Site root - $APACHE_VHOSTS_ROOT_DIR$1"
+	echo -e "=== Development env - wp.config.php - $APACHE_VHOSTS_ROOT_DIR$1/wp-config.php"
+	echo -e "=== Development env - Address - http://$1/"
+	echo -e "=== Development env - WP-ADMIN - http://$1/wordpress/wp-admin"
+	echo -e "=============================================================================== \n"

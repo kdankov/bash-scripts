@@ -1,0 +1,9 @@
+#!/bin/bash
+
+if [ -z "$1" ] # Is parameter 1 zero length?
+then
+	echo -e "ERROR: Requires a site name to be specified."
+else
+	sed 's/{site}/'$1'/g' ~/.dotfiles/config/consular/default.term > ~/.config/consular/$1.term
+	echo -e "=== Consular project created. \n"
+fi
