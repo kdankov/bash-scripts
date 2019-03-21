@@ -68,14 +68,14 @@
 	cd $APACHE_VHOSTS_ROOT_DIR$1
 	
 	mkdir htdocs
-	mkdir htdocs/wordpress
+	mkdir htdocs/wp
 	mkdir config
 	mkdir config/env
 	mkdir scripts
 	mkdir database
 
 	# Download latest stable WordPress release - if the download fails the script fails
-	cd htdocs/wordpress
+	cd htdocs/wp
 	wp core download | grep 'Success' > /dev/null 2>&1
 	if [ $? != 0 ]
 	then
