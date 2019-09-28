@@ -1,0 +1,3 @@
+for f; do
+	convert "$f"[0] "${f%.*}_ff.gif"
+done

@@ -1,0 +1,3 @@
+brew services restart mysql@5.7
+brew services restart php
+sudo brew services restart nginx

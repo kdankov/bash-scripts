@@ -1,0 +1,2 @@
+sudo apachectl stop
+sudo brew services start nginx
