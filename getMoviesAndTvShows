@@ -1,2 +1,4 @@
 #scp -r js:Downloads/* /Volumes/Plex/Torrents/Finished/
-rsync --remove-source-files -r -a -v -P -e ssh js:Downloads/ /Volumes/Plex/Torrents/Finished/
+#rsync --remove-source-files -r -a -v -P -e ssh js:Downloads/ /Volumes/Plex/Torrents/Finished/
+
+scp -r koko@kdh2.duckdns.org:Downloads/* /Volumes/Plex/Torrents/Finished
