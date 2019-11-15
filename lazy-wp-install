@@ -3,7 +3,7 @@
 	MSG_INSTALL_ABORTED="Installation aborted."
 
 	echo -e "==============================================================================="
-	echo -e "=== LazyWP Install - WordPress install for lazy developers = = = =============="
+	echo -e "=== Lazy WP Install - WordPress install for lazy developers = = = ============="
 	echo -e "=============================================================================== \n"
 
 	if [ -z "$1" ] # Is parameter #1 zero length?
@@ -45,14 +45,14 @@
 		exit 1
 	fi
 
-	lazyvhost-create $1
+	lazy-vhost-create $1
 
 	echo -e "=== Installing WordPress ..."
 	echo -e "=== Downloading latest WordPress and extracting files."
 
-	cd $APACHE_VHOSTS_ROOT_DIR$1
-	mkdir wordpress
-	cd wordpress
+	cd $WS_ROOT_DIR$1
+	mkdir wp
+	cd wp
 
 	wp core download | grep 'Success' > /dev/null 2>&1
 	if [ $? != 0 ]
@@ -61,30 +61,10 @@
 	fi
 
 	cd ..
-	mv $APACHE_VHOSTS_ROOT_DIR$1/wordpress/wp-content $APACHE_VHOSTS_ROOT_DIR$1/content
+	mv $WS_ROOT_DIR$1/wordpress/wp-content $WS_ROOT_DIR$1/content
 
-	# Create wp-config
-	{
-		echo "<?php"
-		echo "define('DB_NAME', '"$site_db"');"
-		echo "define('DB_USER', '"$site_db_user"');"
-		echo "define('DB_PASSWORD', '"$DEFAULT_MYSQL_USER_PASS"');"
-		echo "define('DB_HOST', '"$MYSQL_HOST"');"
-		echo "define('DB_CHARSET', 'utf8');"
-		echo "define('EMPTY_TRASH_DAYS', 30 );  // 30 days"
-		echo "define('DISALLOW_FILE_MODS',true); // Disable Plugin and Theme Update and Installation"
-		echo "define('WP_POST_REVISIONS', 20); // Specify the Number of Post Revisions"
-		echo "define('WP_HOME', 'http://"$1"');"
-		echo "define('WP_SITEURL', 'http://"$1"/wordpress');"
-		echo "define('WP_CONTENT_DIR', '"$APACHE_VHOSTS_ROOT_DIR$1"/content');"
-		echo "define('WP_CONTENT_URL', 'http://"$1"/content');"
-		echo '$table_prefix  = "wp_";'
-		echo "define('WPLANG', '');"
-		echo "define('WP_DEBUG', false);"
-		echo "if ( !defined('ABSPATH') )"
-		echo "	define('ABSPATH', dirname(__FILE__) . '/');"
-		echo "	require_once(ABSPATH . 'wp-settings.php');"
-	} > $APACHE_VHOSTS_ROOT_DIR$1/wp-config.php
+	# TODO Create wp-config
+	# $WS_ROOT_DIR$1/wp-config.php
 
 	# Create additional index.php file outside the WordPress folder
 	{
@@ -92,7 +72,7 @@
 		echo "define('WP_USE_THEMES', true);"
 		echo "require('./wordpress/wp-blog-header.php');"
 		echo "?>"
-	} > $APACHE_VHOSTS_ROOT_DIR$1/index.php
+	} > $WS_ROOT_DIR$1/index.php
 
 	# Create DB and add privileges
 	mysqladmin -u $MYSQL_ROOT_USER -p"$MYSQL_ROOT_PASS" create $site_db > /dev/null 2>&1
@@ -101,18 +81,18 @@
 		echo "use mysql;"
 		echo grant all on ${site_db}.* to "$site_db_user"@'localhost' identified by "'${DEFAULT_MYSQL_USER_PASS}';"
 		echo "flush privileges;"
-	} > $APACHE_VHOSTS_ROOT_DIR$1/sql.$$
+	} > $WS_ROOT_DIR$1/sql.$$
 
-	mysql -u $MYSQL_ROOT_USER -p"$MYSQL_ROOT_PASS" $site_db < $APACHE_VHOSTS_ROOT_DIR$1/sql.$$ > /dev/null 2>&1
+	mysql -u $MYSQL_ROOT_USER -p"$MYSQL_ROOT_PASS" $site_db < $WS_ROOT_DIR$1/sql.$$ > /dev/null 2>&1
 
 	echo -e "=== Database created successfully"
 
 	# Remove the DB & DB User generation file
-	rm $APACHE_VHOSTS_ROOT_DIR$1/sql.$$
+	rm $WS_ROOT_DIR$1/sql.$$
 
 	# Go to wordpress folder and install WordPress database and the Admin account
-	cd $APACHE_VHOSTS_ROOT_DIR$1/wordpress
-	wp core install --url=$APACHE_VHOSTS_ROOT_DIR$1/wordpress --title=$1 --admin_name=$DEFAULT_WORDPRESS_USER_NAME --admin_email=$DEFAULT_WORDPRESS_USER_EMAIL --admin_password=$DEFAULT_WORDPRESS_USER_PASS > /dev/null 2>&1
+	cd $WS_ROOT_DIR$1/wp
+	wp core install --url=$WS_ROOT_DIR$1/wp --title=$1 --admin_name=$DEFAULT_WORDPRESS_USER_NAME --admin_email=$DEFAULT_WORDPRESS_USER_EMAIL --admin_password=$DEFAULT_WORDPRESS_USER_PASS > /dev/null 2>&1
 
 	echo -e "=== Custom WordPress configuration finished \n"
 
@@ -123,19 +103,19 @@
 
 	if [ $USE_CONSULAR = 1 ]
 	then
-		lazyconsular-installproject $1
+		lazy-consular-install-project $1
 	fi
 
 	echo -e "=== Opening site in the default browser ... \n"
-	open 'http://'$1'/'
-	open 'http://'$1'/wordpress/wp-admin'
+	open 'http://'$1.$2'/'
+	open 'http://'$1.$2'/wp/wp-admin'
 
 	echo -e "==============================================================================="
 	echo -e "=== WordPress installation and configuration finished successfully  ==========="
 	echo -e "==============================================================================="
-	echo -e "=== Local installation - VHost file - $APACHE_VHOSTS_CONF_DIR$1"
-	echo -e "=== Local installation - Site root - $APACHE_VHOSTS_ROOT_DIR$1"
-	echo -e "=== Local installation - wp.config.php - $APACHE_VHOSTS_ROOT_DIR$1/wp-config.php"
-	echo -e "=== Local installation - Address - http://$1/"
-	echo -e "=== Local installation - WP-ADMIN - http://$1/wordpress/wp-admin"
+	echo -e "=== Local installation - VHost file - $WS_VHOST_DIR$1"
+	echo -e "=== Local installation - Site root - $WS_ROOT_DIR$1"
+	echo -e "=== Local installation - wp.config.php - $WS_ROOT_DIR$1/wp-config.php"
+	echo -e "=== Local installation - Address - http://$1.$2/"
+	echo -e "=== Local installation - WP-ADMIN - http://$1.$2/wp/wp-admin"
 	echo -e "=============================================================================== \n"
